@@ -1,8 +1,3 @@
-"""Voyage d'Ô API client. Stations via /mob1, logement via /clara.
-
-Every call returns the API payload or {"erreur": <code>} (graceful degradation).
-"""
-
 from __future__ import annotations
 
 import httpx
@@ -31,8 +26,6 @@ def _get(path: str, base: str = MOB1_URL):
         logger.warning("Appel API échoué (%s) : %s", type(exc).__name__, path)
         return {"erreur": "reseau"}
 
-
-# ── Stations (ville -> StationID) ──────────────────────────────────────────────
 
 _STATIONS_CACHE: list[dict] | None = None
 
@@ -65,9 +58,6 @@ def resolve_ville(name: str) -> tuple[int | None, str | None]:
         if city.startswith(query) or query in city:
             return (s.get("StationID"), s.get("StationCity"))
     return (None, None)
-
-
-# ── Endpoints logement (/clara) ────────────────────────────────────────────────
 
 
 def search_logements(ville_id: int | str, start: str, end: str, equip: str = "0"):

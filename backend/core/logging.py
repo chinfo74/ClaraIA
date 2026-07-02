@@ -1,14 +1,3 @@
-"""
-Structured (JSON) logging for Clara.
-
-Every event is written as one JSON object per line to `log_file`, and also to
-stderr for local development. The back-office reads these lines back to display
-the activity log.
-
-PII rule: log *counts and statuses only* — never the sensitive content itself.
-Use `log_event(logger, "pii.scrubbed", count=3)`, never the matched strings.
-"""
-
 from __future__ import annotations
 
 import json
@@ -69,12 +58,10 @@ def get_logger(name: str) -> logging.Logger:
 
 
 def log_event(logger: logging.Logger, event: str, level: int = logging.INFO, **data: Any) -> None:
-    """Emit a structured event. `data` must contain counts/ids/statuses only."""
     logger.log(level, event, extra={"data": data})
 
 
 def read_logs(limit: int = 200) -> list[dict[str, Any]]:
-    """Return the most recent structured log records (newest first) for the back-office."""
     settings = get_settings()
     path = Path(settings.log_file)
     if not path.exists():

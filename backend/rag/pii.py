@@ -1,19 +1,3 @@
-"""
-PII guardrail — the *second* safety net of the ingestion pipeline.
-
-The LLM extraction step is the first remover (it understands context). This
-module then runs Microsoft Presidio configured for French over the result to
-catch any residual PII. When in doubt, we mask.
-
-Design choice (precision over recall on domain terms): we mask NOM / TÉLÉPHONE /
-EMAIL / IBAN / CARTE / IP / NUM_SECU / ADRESSE, but NOT generic spaCy LOCATION
-entities — otherwise thermal town names (Dax, Vichy…) that are the whole point of
-the RAG would be destroyed. Postal addresses are caught by a targeted regex.
-
-Privacy: we return *counts per type*, never the matched strings, so callers can
-log how much was removed without ever logging the sensitive content.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -22,7 +6,6 @@ from typing import Any
 
 from ..core.config import get_settings
 
-# Entity types we actively mask, and the French-facing tag used to replace them.
 _MASK: dict[str, str] = {
     "PERSON": "[NOM]",
     "PHONE_NUMBER": "[TÉLÉPHONE]",
@@ -70,7 +53,6 @@ def _get_analyzer() -> Any:
     nlp_configuration = {
         "nlp_engine_name": "spacy",
         "models": [{"lang_code": lang, "model_name": settings.spacy_model}],
-        # French spaCy NER labels (PER/LOC/ORG/MISC) -> Presidio entity names.
         "ner_model_configuration": {
             "model_to_presidio_entity_mapping": {
                 "PER": "PERSON",
@@ -91,7 +73,6 @@ def _get_analyzer() -> Any:
         ) from exc
 
     registry = RecognizerRegistry(supported_languages=[lang])
-    # NLP-based recognizer: surfaces PERSON/LOCATION/ORG from the French spaCy NER.
     registry.add_recognizer(SpacyRecognizer(supported_language=lang))
     registry.add_recognizer(
         EmailRecognizer(
@@ -110,7 +91,6 @@ def _get_analyzer() -> Any:
     registry.add_recognizer(CreditCardRecognizer(supported_language=lang))
     registry.add_recognizer(IpRecognizer(supported_language=lang))
 
-    # French social-security number: 13 digits + 2 control digits, often spaced.
     registry.add_recognizer(
         PatternRecognizer(
             supported_entity="FR_SSN",
@@ -124,7 +104,6 @@ def _get_analyzer() -> Any:
             ],
         )
     )
-    # French postal address: street number + street type (targeted, avoids town names).
     registry.add_recognizer(
         PatternRecognizer(
             supported_entity="FR_ADDRESS",
@@ -149,7 +128,6 @@ def _get_analyzer() -> Any:
 
 
 def scrub_pii(text: str) -> PiiResult:
-    """Mask residual PII in `text`. Returns the masked text and per-type counts."""
     if not text.strip():
         return PiiResult(text=text, counts={})
 

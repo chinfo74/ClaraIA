@@ -1,13 +1,3 @@
-"""
-RAG section — answers questions about assurance / conditions from the documents
-ingested in step 1 (ChromaDB), instead of handing off to the team.
-
-Flow: retrieve relevant chunks → if nothing relevant, hand off (never guess) →
-otherwise synthesize a French answer grounded ONLY on those chunks, with sources.
-The query is the pseudonymized message (RGPD: nothing personal leaves to the LLM /
-embedding provider).
-"""
-
 from __future__ import annotations
 
 from ...core.llm_client import get_llm_client
@@ -23,7 +13,7 @@ logger = get_logger("rag_section")
 def handle_rag(message: str, session: Session, scrubbed_message: str, section: str) -> dict:
     try:
         hits = search(scrubbed_message, n_results=5)
-    except Exception:  # noqa: BLE001 — embedding/vector store unavailable
+    except Exception:  # noqa: BLE001
         logger.exception("RAG indisponible (recherche)")
         return handoff(section, message, session)
 
@@ -35,7 +25,6 @@ def handle_rag(message: str, session: Session, scrubbed_message: str, section: s
     )
 
     if not relevant:
-        # No grounding → don't guess, hand off to the team.
         log_event(logger, "rag.no_context", session_id=session.session_id, section=section)
         return handoff(section, message, session)
 
@@ -48,7 +37,7 @@ def handle_rag(message: str, session: Session, scrubbed_message: str, section: s
             [{"role": "user", "content": f"Contexte :\n{context}\n\nQuestion : {scrubbed_message}"}],
             max_tokens=700,
         )
-    except Exception:  # noqa: BLE001 — LLM unavailable
+    except Exception:  # noqa: BLE001
         logger.exception("RAG indisponible (synthèse)")
         return handoff(section, message, session)
 

@@ -1,5 +1,3 @@
-"""Theme `infos_logement`: specific questions answered from the /clara endpoints."""
-
 from backend.agents.sections import logement
 from backend.session.store import Session
 from backend.tools import voyagedo_api

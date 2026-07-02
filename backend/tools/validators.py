@@ -1,12 +1,3 @@
-"""
-Deterministic validation of the logement slots (no AI here).
-
-Checks that required fields are present, that dates are well-formed, future and
-coherent, that the party size is plausible, and that the city maps to a real
-thermal station. Returns a structured verdict the orchestration turns into either
-a slot-filling question (missing fields) or a friendly error (invalid values).
-"""
-
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -28,9 +19,6 @@ def parse_date(value: str | None) -> date | None:
 
 
 def validate_logement(slots: dict, today: date | None = None) -> dict:
-    """Return a verdict dict:
-    {ok, missing: [...], error: <code|None>, ville_id, ville_canon, start, end, nb_personnes}
-    """
     today = today or date.today()
 
     missing = [f for f in REQUIRED_FIELDS if not slots.get(f)]

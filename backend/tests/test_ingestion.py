@@ -1,11 +1,3 @@
-"""
-End-to-end ingestion pipeline test with the LLM, embeddings and vector store
-mocked (no network, no API key). Presidio runs for real, so this verifies that
-the second PII net catches what the (simulated) LLM left behind.
-
-Skipped if Presidio / the French spaCy model is unavailable.
-"""
-
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -24,8 +16,6 @@ except RuntimeError as exc:
 
 
 class _FakeLLM:
-    """Simulates an LLM that extracted the doc but *missed* some PII."""
-
     def complete_json(self, system, user, schema, schema_name="output"):
         return {
             "title": "Conditions de réservation",
@@ -85,11 +75,9 @@ def test_pipeline_removes_residual_pii_and_indexes(tmp_path, monkeypatch):
     assert result.n_chunks >= 1
 
     md = Path(result.md_path).read_text(encoding="utf-8")
-    # Presidio caught the PII the simulated LLM left behind:
     assert "Paul Durand" not in md
     assert "06 11 22 33 44" not in md
     assert result.pii_removed >= 2
-    # Domain content is preserved and indexed:
     assert "acompte" in md
     assert store.count() == result.n_chunks
 

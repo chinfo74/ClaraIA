@@ -1,11 +1,3 @@
-"""
-Conversation session store (in-memory).
-
-Holds the per-session message history so the chat keeps context across turns.
-In-memory is fine for the prototype; swap for Redis/DB later behind the same API.
-Step 3 (Manager + sections) will also use this to drive slot-filling.
-"""
-
 from __future__ import annotations
 
 import time
@@ -16,8 +8,8 @@ from dataclasses import dataclass, field
 @dataclass
 class Session:
     session_id: str
-    messages: list[dict] = field(default_factory=list)  # {"role": str, "content": str}
-    state: dict = field(default_factory=dict)            # reserved for step-3 slot-filling
+    messages: list[dict] = field(default_factory=list)
+    state: dict = field(default_factory=dict)
     updated_at: float = field(default_factory=time.time)
 
 

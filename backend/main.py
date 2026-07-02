@@ -1,13 +1,3 @@
-"""
-Clara backend — FastAPI app.
-
-Step 1 scope: the RAG ingestion pipeline + the document back-office.
-  REST API   : /api/ingest, /api/documents, /api/search, /api/logs, /health
-  Back-office : /admin (upload, document list, cleaned .md viewer, activity log)
-
-Run:  uvicorn backend.main:app --reload --port 8000     (from the repo root)
-"""
-
 from __future__ import annotations
 
 import secrets
@@ -48,12 +38,10 @@ app.mount("/widget", StaticFiles(directory=str(WIDGET_DIR), html=True), name="wi
 
 ALLOWED_SUFFIXES = {".pdf", ".docx", ".txt", ".md"}
 
-# ── Back-office authentication (HTTP Basic) ──────────────────────────────────
 _security = HTTPBasic(auto_error=True)
 
 
 def require_admin(credentials: HTTPBasicCredentials = Depends(_security)) -> str:
-    """Protect the back-office. Secure by default: no ADMIN_PASSWORD → access refused."""
     if not settings.admin_password:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -83,7 +71,6 @@ def _save_upload(upload: UploadFile) -> Path:
 
 
 def _ingest_upload(file: UploadFile) -> IngestResult:
-    """Save the upload, ingest it, then drop the raw (PII-bearing) file unless KEEP_UPLOADS."""
     saved = _save_upload(file)
     try:
         return ingest_file(saved, file.filename or saved.name)
@@ -91,9 +78,6 @@ def _ingest_upload(file: UploadFile) -> IngestResult:
         if not settings.keep_uploads:
             saved.unlink(missing_ok=True)
             log_event(logger, "upload.discarded", filename=file.filename)
-
-
-# ── REST API ──────────────────────────────────────────────────────────────────
 
 
 @app.post("/api/ingest", dependencies=[Depends(require_admin)])
@@ -127,9 +111,6 @@ async def api_search(q: str, k: int = 5) -> dict:
     }
 
 
-# ── Chat (widget) ───────────────────────────────────────────────────────────
-
-
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
     session_id: str | None = None
@@ -140,19 +121,17 @@ class ChatResponse(BaseModel):
     session_id: str
     actions: list[dict] = []
     sources: list[str] = []
-    suggestions: list[str] = []  # boutons de réponse rapide proposés au client
+    suggestions: list[str] = []
 
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
-    # Sync endpoint: FastAPI runs it in a threadpool, so the blocking LLM/API/Presidio
-    # calls inside the Manager don't block the event loop.
     store = get_session_store()
     session = store.get_or_create(req.session_id)
     store.append(session.session_id, "user", req.message)
     try:
         result = handle_chat(req.message, session)
-    except Exception:  # noqa: BLE001 — never surface a raw error to the client
+    except Exception:  # noqa: BLE001
         logger.exception("Erreur de traitement du chat")
         result = {
             "response": "Désolée, je rencontre un problème technique. Réessayez dans un instant, "
@@ -194,9 +173,6 @@ async def health() -> dict:
 @app.get("/")
 async def root() -> dict:
     return {"message": "Clara API (étape 1 — ingestion RAG)", "back_office": "/admin", "docs": "/docs"}
-
-
-# ── Back-office (server-rendered, no build step) ─────────────────────────────
 
 
 @app.get("/admin", response_class=HTMLResponse, dependencies=[Depends(require_admin)])

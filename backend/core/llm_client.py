@@ -1,14 +1,3 @@
-"""
-Provider-agnostic LLM access for Clara.
-
-The rest of the codebase only ever calls `get_llm_client()` (chat) and
-`embed_texts()` (embeddings). Swapping providers is a single `.env` change
-(`LLM_PROVIDER`, `EMBED_PROVIDER`) — no other file needs to change.
-
-Default provider: Mistral (EU residency, strong French). The Mistral SDK
-specifics are confined to `MistralLLMClient` / `_mistral_embed` below.
-"""
-
 from __future__ import annotations
 
 import json
@@ -20,12 +9,10 @@ from .logging import get_logger
 
 logger = get_logger("llm")
 
-# Lazily-built, shared Mistral SDK client (importing mistralai is optional until used).
 _mistral_singleton: Any = None
 
 
 def _content_to_text(content: Any) -> str:
-    """Mistral v2 message content may be a string or a list of content chunks."""
     if content is None:
         return ""
     if isinstance(content, str):
@@ -43,8 +30,7 @@ def _content_to_text(content: Any) -> str:
 def _get_mistral(settings: Settings) -> Any:
     global _mistral_singleton
     if _mistral_singleton is None:
-        # mistralai v2 exposes the client under mistralai.client (Speakeasy layout).
-        from mistralai.client import Mistral  # imported lazily so the app boots without the dep
+        from mistralai.client import Mistral
 
         if not settings.mistral_api_key:
             raise RuntimeError(
@@ -55,21 +41,18 @@ def _get_mistral(settings: Settings) -> Any:
     return _mistral_singleton
 
 
-# ── Chat abstraction ──────────────────────────────────────────────────────────
-
-
 class LLMClient(ABC):
     @abstractmethod
     def complete_text(
         self, system: str, messages: list[dict[str, str]], max_tokens: int = 1024
     ) -> str:
-        """Free-form text completion (RAG synthesis, conversation, formatting)."""
+        ...
 
     @abstractmethod
     def complete_json(
         self, system: str, user: str, schema: dict, schema_name: str = "output"
     ) -> dict:
-        """Structured completion constrained to a JSON schema; returns a parsed dict."""
+        ...
 
 
 class MistralLLMClient(LLMClient):
@@ -94,7 +77,6 @@ class MistralLLMClient(LLMClient):
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ]
-        # Preferred path: strict custom JSON schema (most reliable).
         try:
             resp = self._client.chat.complete(
                 model=self._model,
@@ -109,7 +91,7 @@ class MistralLLMClient(LLMClient):
                 },
             )
             return json.loads(_content_to_text(resp.choices[0].message.content))
-        except Exception as exc:  # noqa: BLE001 — broad fallback to plain JSON mode
+        except Exception as exc:  # noqa: BLE001
             logger.warning("json_schema indisponible (%s), repli sur json_object", type(exc).__name__)
             guided_system = (
                 system
@@ -129,8 +111,6 @@ class MistralLLMClient(LLMClient):
 
 
 class OllamaLLMClient(LLMClient):
-    """Local, free, fully offline provider (ideal for RGPD-sensitive data)."""
-
     def __init__(self) -> None:
         self._settings = get_settings()
         self._base = self._settings.ollama_base_url.rstrip("/")
@@ -162,7 +142,6 @@ class OllamaLLMClient(LLMClient):
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ]
-        # Recent Ollama accepts a JSON schema as `format` (structured outputs).
         try:
             return json.loads(self._chat(messages, fmt=schema))
         except Exception as exc:  # noqa: BLE001
@@ -192,11 +171,7 @@ def get_llm_client() -> LLMClient:
     )
 
 
-# ── Embeddings abstraction ──────────────────────────────────────────────────────
-
-
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    """Embed a batch of texts using the configured EMBED_PROVIDER."""
     if not texts:
         return []
     settings = get_settings()

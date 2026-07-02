@@ -1,18 +1,3 @@
-"""
-RAG ingestion pipeline (Step 1).
-
-    upload  ->  parse (PDF/DOCX/TXT)
-            ->  LLM extraction (doc type + essential info + first PII removal)
-            ->  Presidio guardrail (second PII net, French)
-            ->  clean .md (frontmatter + body)
-            ->  chunk -> embed -> ChromaDB
-            ->  registry + structured logs (counts only, never PII content)
-
-Public entry points:
-    ingest_file(file_path, original_filename) -> IngestResult     # full pipeline
-    add_document_to_vectorstore(md_path, metadata) -> IngestResult # index an existing .md
-"""
-
 from __future__ import annotations
 
 import json
@@ -68,7 +53,7 @@ EXTRACTION_SYSTEM = (
 class IngestResult:
     document_id: str
     filename: str
-    status: str  # "success" | "indexed" | "error"
+    status: str
     doc_type: str = "autre"
     title: str = ""
     summary: str = ""
@@ -88,12 +73,7 @@ class UnsupportedFileTypeError(ValueError):
     pass
 
 
-# ── Parsing ────────────────────────────────────────────────────────────────────
-
-
 def _extract_pdf(path: str) -> str:
-    """pdfplumber handles glyph spacing far better than pypdf on real-world PDFs;
-    fall back to pypdf if pdfplumber is unavailable or returns nothing."""
     try:
         import pdfplumber
 
@@ -124,9 +104,6 @@ def extract_text(file_path: str | Path) -> str:
     raise UnsupportedFileTypeError(
         f"Format non supporté : '{suffix}'. Formats acceptés : PDF, DOCX, TXT."
     )
-
-
-# ── Chunking (lightweight, no extra dependency) ──────────────────────────────────
 
 
 def chunk_text(text: str, size: int, overlap: int) -> list[str]:
@@ -173,9 +150,6 @@ def chunk_text(text: str, size: int, overlap: int) -> list[str]:
     return chunks
 
 
-# ── Markdown assembly / parsing ──────────────────────────────────────────────────
-
-
 def _slugify(value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
     return slug or "document"
@@ -208,9 +182,6 @@ def _read_md_body(md_path: str | Path) -> str:
     return text.strip()
 
 
-# ── Registry (documents.json) ────────────────────────────────────────────────────
-
-
 def _load_registry() -> dict[str, dict[str, Any]]:
     path = Path(get_settings().documents_registry)
     if not path.exists():
@@ -236,11 +207,7 @@ def get_document(document_id: str) -> dict[str, Any] | None:
     return _load_registry().get(document_id)
 
 
-# ── Indexing ──────────────────────────────────────────────────────────────────
-
-
 def add_document_to_vectorstore(md_path: str, metadata: dict[str, Any]) -> IngestResult:
-    """Chunk an existing .md, embed it and (re)add it to the vector store."""
     source = metadata.get("source") or Path(md_path).name
     document_id = metadata.get("document_id") or _slugify(Path(md_path).stem)
 
@@ -252,7 +219,7 @@ def add_document_to_vectorstore(md_path: str, metadata: dict[str, Any]) -> Inges
 
     embeddings = embed_texts(chunks)
     store = get_vectorstore()
-    store.delete_by_source(source)  # avoid duplicates on re-ingestion
+    store.delete_by_source(source)
 
     base_meta = {
         "source": source,
@@ -277,9 +244,6 @@ def add_document_to_vectorstore(md_path: str, metadata: dict[str, Any]) -> Inges
     )
 
 
-# ── LLM extraction ──────────────────────────────────────────────────────────────
-
-
 def _llm_extract(raw_text: str) -> dict[str, Any]:
     client = get_llm_client()
     data = client.complete_json(
@@ -296,9 +260,6 @@ def _llm_extract(raw_text: str) -> dict[str, Any]:
     if data["doc_type"] not in DOC_TYPES:
         data["doc_type"] = "autre"
     return data
-
-
-# ── Full pipeline ────────────────────────────────────────────────────────────────
 
 
 def ingest_file(file_path: str | Path, original_filename: str) -> IngestResult:
@@ -321,7 +282,6 @@ def ingest_file(file_path: str | Path, original_filename: str) -> IngestResult:
             doc_type=extraction["doc_type"], content_chars=len(extraction["content_md"]),
         )
 
-        # Second PII net (Presidio). Log counts only — never the matched content.
         scrubbed_content = scrub_pii(extraction["content_md"])
         scrubbed_summary = scrub_pii(extraction["summary"])
         scrubbed_title = scrub_pii(extraction["title"])
@@ -373,7 +333,7 @@ def ingest_file(file_path: str | Path, original_filename: str) -> IngestResult:
         )
         return result
 
-    except Exception as exc:  # noqa: BLE001 — graceful degradation, surface a clean status
+    except Exception as exc:  # noqa: BLE001
         logger.exception("Echec ingestion document_id=%s", document_id)
         result = IngestResult(
             document_id=document_id,

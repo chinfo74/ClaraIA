@@ -1,5 +1,3 @@
-"""Tests for the deterministic logement validation (no network — resolve_ville is mocked)."""
-
 from datetime import date
 
 import pytest

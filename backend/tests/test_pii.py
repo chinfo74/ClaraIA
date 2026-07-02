@@ -1,11 +1,3 @@
-"""
-PII guardrail tests (Presidio, French).
-
-Skipped automatically if Presidio or the French spaCy model is not installed.
-These cover the core acceptance criterion of step 1: a name and a phone number
-must be removed — while thermal town names must be preserved.
-"""
-
 import pytest
 
 pytest.importorskip("presidio_analyzer")
@@ -14,7 +6,7 @@ pytest.importorskip("presidio_anonymizer")
 from backend.rag.pii import scrub_pii  # noqa: E402
 
 try:
-    scrub_pii("amorce")  # triggers spaCy model load; skip cleanly if missing
+    scrub_pii("amorce")
 except RuntimeError as exc:
     pytest.skip(f"Modèle spaCy FR indisponible : {exc}", allow_module_level=True)
 
@@ -42,6 +34,5 @@ def test_thermal_town_name_is_preserved():
 
 
 def test_counts_never_leak_content():
-    # The result exposes counts per type, not the matched strings.
     result = scrub_pii("Appelez Marie Martin au 07 98 76 54 32.")
     assert all(isinstance(v, int) for v in result.counts.values())

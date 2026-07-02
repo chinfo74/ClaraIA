@@ -1,12 +1,3 @@
-"""
-Vector store behind a small interface so we can later swap ChromaDB for
-pgvector/Qdrant without touching the ingestion or retrieval code.
-
-Embeddings are computed by `core.llm_client.embed_texts` (provider-agnostic) and
-passed in explicitly, so the store never needs to know which embedding provider
-is configured.
-"""
-
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -39,8 +30,7 @@ class VectorStore(ABC):
     def query(self, embedding: list[float], n_results: int = 5) -> list[SearchHit]: ...
 
     @abstractmethod
-    def delete_by_source(self, source: str) -> int:
-        """Remove all chunks tagged with this source filename. Returns count removed."""
+    def delete_by_source(self, source: str) -> int: ...
 
     @abstractmethod
     def count(self) -> int: ...
@@ -74,7 +64,6 @@ class ChromaVectorStore(VectorStore):
         dists = (res.get("distances") or [[]])[0]
         hits: list[SearchHit] = []
         for doc, meta, dist in zip(docs, metas, dists):
-            # cosine distance -> similarity
             hits.append(SearchHit(text=doc, metadata=meta or {}, score=round(1.0 - dist, 4)))
         return hits
 
@@ -94,6 +83,5 @@ def get_vectorstore() -> VectorStore:
 
 
 def search(query: str, n_results: int = 5) -> list[SearchHit]:
-    """Convenience helper for tests/debug: embed a query and return matching chunks."""
     embedding = embed_texts([query])[0]
     return get_vectorstore().query(embedding, n_results=n_results)

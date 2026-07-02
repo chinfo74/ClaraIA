@@ -1,5 +1,3 @@
-"""Back-office is protected; the widget chat endpoint stays public."""
-
 import pytest
 from fastapi.testclient import TestClient
 
@@ -11,7 +9,6 @@ settings = get_settings()
 
 
 def test_admin_is_protected():
-    # 401 (bad/missing creds) or 503 (no ADMIN_PASSWORD configured) — never open.
     assert client.get("/admin").status_code in (401, 503)
 
 
@@ -33,7 +30,6 @@ def test_admin_with_wrong_credentials():
 
 
 def test_chat_endpoint_is_public():
-    # "Bonjour" est traité en smalltalk (sans appel LLM) → test hors-ligne.
     assert client.post("/api/chat", json={"message": "Bonjour"}).status_code == 200
 
 

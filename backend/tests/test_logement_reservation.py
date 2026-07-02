@@ -1,9 +1,3 @@
-"""
-Reservation safety: make_reservation must NEVER be called before an explicit "oui".
-The LLM extraction is mocked so the test is deterministic and offline (the only API
-that would be touched, make_reservation, is also mocked — no real booking).
-"""
-
 from backend.agents.sections import logement
 from backend.session.store import Session
 from backend.tools import voyagedo_api
@@ -25,7 +19,6 @@ def test_reservation_requires_explicit_confirmation(monkeypatch):
                         lambda *a, **k: (calls.append(a), {"ok": True})[1])
     session = Session(session_id="t1")
 
-    # Turn 1: full reservation request → recap + confirmation, NO booking yet.
     monkeypatch.setattr(logement, "_extract_slots", lambda m, s: _slots(
         theme="reservation", advert_id=3727, start_date="2026-09-01",
         end_date="2026-09-21", adults=2, children=0))
@@ -34,7 +27,6 @@ def test_reservation_requires_explicit_confirmation(monkeypatch):
     assert calls == []
     assert session.state["logement"].get("awaiting_confirmation") is True
 
-    # Turn 2: "oui" → booking happens exactly once with the right args.
     monkeypatch.setattr(logement, "_extract_slots", lambda m, s: _slots())
     r2 = logement.handle_logement("oui", session, "oui")
     assert len(calls) == 1

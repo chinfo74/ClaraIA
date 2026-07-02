@@ -1,17 +1,3 @@
-"""
-Section Logement — la seule section complète du prototype.
-
-L'IA traduit la demande en JSON (theme + paramètres) ; le code déterministe valide,
-appelle l'API Voyage d'Ô et formate. Quatre parcours selon `theme` :
-  - recherche_logement : ville + dates → liste de logements (formatage IA).
-  - details_logement   : référence → fiche détaillée.
-  - disponibilite      : référence + dates → disponibilité + tarif (sinon alternatives).
-  - reservation        : référence + dates → réservation, avec CONFIRMATION explicite
-                         obligatoire avant tout appel (action engageante).
-Slot-filling : l'état est conservé en session ; `pending_section` garde la main à la
-section logement au tour suivant.
-"""
-
 from __future__ import annotations
 
 import json
@@ -98,9 +84,6 @@ def _extract_slots(message: str, state: dict) -> dict:
     )
 
 
-# ── Dispatch ──────────────────────────────────────────────────────────────────
-
-
 def handle_logement(message: str, session: Session, scrubbed_message: str) -> dict:
     state = session.state.setdefault("logement", {})
     extracted = _extract_slots(scrubbed_message, state)
@@ -124,9 +107,6 @@ def handle_logement(message: str, session: Session, scrubbed_message: str) -> di
     if theme == "reservation":
         return _handle_reservation(state, session, message, confirm)
     return _handle_search(state, session)
-
-
-# ── recherche_logement ───────────────────────────────────────────────────────
 
 
 def _format_results(items: list, verdict: dict) -> str:
@@ -174,7 +154,6 @@ def _handle_search(state: dict, session: Session) -> dict:
         logger, "logement.api", session_id=session.session_id, endpoint="search",
         status="erreur" if failed else "ok", count=len(items), ville=verdict["ville_canon"],
     )
-    # search done — keep slots (so a follow-up "la réf X est dispo ?" réutilise les dates)
     session.state.pop("pending_section", None)
     if failed:
         return _reply(_DEGRADED, session)
@@ -189,9 +168,6 @@ def _handle_search(state: dict, session: Session) -> dict:
         actions=[{"type": "logements", "count": len(items)}],
         suggestions=["Vérifier une disponibilité", "Voir les détails d'un logement"],
     )
-
-
-# ── details_logement ─────────────────────────────────────────────────────────
 
 
 def _format_card(card: dict) -> str:
@@ -230,8 +206,6 @@ def _handle_details(state: dict, session: Session) -> dict:
         )
     return _reply(_format_card(card), session, actions=[{"type": "logement_card", "advert_id": advert_id}])
 
-
-# ── infos_logement ────────────────────────────────────────────────────────────
 
 _INFO_INTENTS = {
     "accessibilite": (
@@ -386,9 +360,6 @@ def _handle_infos(state: dict, session: Session) -> dict:
                   actions=[{"type": "logement_info", "advert_id": advert_id}])
 
 
-# ── disponibilite ────────────────────────────────────────────────────────────
-
-
 def _format_availability(av: dict, advert_id) -> str:
     msg = f"Bonne nouvelle : le logement réf. {advert_id} est disponible"
     if av.get("start") and av.get("end"):
@@ -452,9 +423,6 @@ def _handle_availability(state: dict, session: Session) -> dict:
     )
 
 
-# ── reservation (confirmation explicite obligatoire) ──────────────────────────
-
-
 def _handle_reservation(state: dict, session: Session, message: str, confirm: bool) -> dict:
     advert_id, start, end = state.get("advert_id"), state.get("start_date"), state.get("end_date")
     adults = state.get("adults") or state.get("nb_personnes") or 1
@@ -481,7 +449,6 @@ def _handle_reservation(state: dict, session: Session, message: str, confirm: bo
                 "Souhaitez-vous confirmer cette réservation ? Répondez « oui » pour valider, ou « non » pour annuler.",
                 session, suggestions=["Oui", "Non"],
             )
-        # Confirmation explicite reçue → on réserve.
         data = api.make_reservation(advert_id, start, end, adults, children)
         ok = bool(data) and not (isinstance(data, dict) and "erreur" in data)
         log_event(logger, "logement.api", session_id=session.session_id, endpoint="reserver",
@@ -499,7 +466,6 @@ def _handle_reservation(state: dict, session: Session, message: str, confirm: bo
             session, actions=[{"type": "reservation", "advert_id": advert_id}],
         )
 
-    # Premier passage : récapitulatif + demande de confirmation explicite.
     state["awaiting_confirmation"] = True
     session.state["pending_section"] = "logement"
     return _reply(

@@ -1,20 +1,9 @@
-"""
-JSON schemas and prompts for the Manager (router) and the Logement section.
-
-The section AIs ONLY produce/format JSON — the deterministic code does the rest.
-Schemas are plain dicts (consumed by llm_client.complete_json, provider-agnostic).
-"""
-
 from __future__ import annotations
-
-# ── Manager / routing ────────────────────────────────────────────────────────
 
 SECTIONS = ["logement", "assurance", "conditions", "proprietaire", "stations", "autre"]
 CONFIDENCE_THRESHOLD = 0.6
 
-# Sections answered from the ingested documents (RAG) instead of a human handoff.
 RAG_SECTIONS = {"assurance", "conditions"}
-# Minimum cosine similarity for a retrieved chunk to be considered relevant.
 RAG_MIN_SCORE = 0.30
 
 CLASSIFY_SCHEMA = {
@@ -44,8 +33,6 @@ CLASSIFY_SYSTEM = (
     "baisse la confiance."
 )
 
-
-# ── Section Logement : extraction des créneaux (slot-filling) ─────────────────
 
 LOGEMENT_SCHEMA = {
     "type": "object",
@@ -104,7 +91,6 @@ LOGEMENT_INFO_SYSTEM = (
     "termine en proposant de vérifier la disponibilité ou d'aider à réserver."
 )
 
-# Persona for the warm, senior-friendly final formatting.
 FORMAT_SYSTEM = (
     "Tu es Clara, l'assistante de Voyage d'Ô. Tu t'adresses à des curistes seniors : "
     "phrases courtes, ton chaleureux, rassurant et simple. N'invente RIEN : utilise "
@@ -114,7 +100,6 @@ FORMAT_SYSTEM = (
     "Termine en proposant d'obtenir plus de détails ou d'être aidé pour réserver."
 )
 
-# Persona for grounded answers from the ingested documents (RAG).
 RAG_SYSTEM = (
     "Tu es Clara, l'assistante de Voyage d'Ô, qui s'adresse à des curistes seniors : "
     "phrases courtes, ton chaleureux et rassurant. Réponds à la question en t'appuyant "

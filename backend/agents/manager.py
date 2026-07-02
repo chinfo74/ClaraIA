@@ -1,12 +1,3 @@
-"""
-Manager (router) — classifies each request into a section and orchestrates the
-response. Below the confidence threshold, or for `autre`, it hands off to the
-human team rather than guessing.
-
-RGPD: the user message is pseudonymized (Presidio) BEFORE any external LLM call,
-per the transverse constraint — not only at ingestion.
-"""
-
 from __future__ import annotations
 
 from ..core.llm_client import get_llm_client
@@ -30,12 +21,10 @@ _GREETINGS = ("bonjour", "bonsoir", "salut", "coucou", "hello", "bonne journée"
 _THANKS = ("merci", "je vous remercie")
 _BYE = ("au revoir", "à bientôt", "bonne soirée")
 
-# Suggestions de départ (boutons de réponse rapide) proposées au client.
 STARTER_SUGGESTIONS = ["Trouver un logement", "Une question sur l'assurance", "Le déroulement du séjour"]
 
 
 def _smalltalk(message: str) -> tuple[str, list[str]] | None:
-    """Friendly conversational replies (+ suggestions) so greetings aren't handed off."""
     t = message.lower().strip()
     if any(g in t for g in _GREETINGS) and len(t) < 40:
         return (
@@ -67,13 +56,11 @@ def classify(message: str) -> dict:
 
 
 def handle(message: str, session: Session) -> dict:
-    # RGPD: pseudonymize before any external LLM call.
     scrubbed = scrub_pii(message)
     if scrubbed.total:
         log_event(logger, "chat.pii_pseudonymized", session_id=session.session_id, count=scrubbed.total)
     scrubbed_message = scrubbed.text
 
-    # Greetings / thanks handled conversationally (not a handoff).
     chitchat = _smalltalk(message)
     if chitchat:
         reply, suggestions = chitchat
@@ -81,8 +68,6 @@ def handle(message: str, session: Session) -> dict:
         return {"response": reply, "section": "conversation", "sources": [],
                 "actions": [], "suggestions": suggestions}
 
-    # Continuity: if a logement slot-filling flow is pending, stay in it (even if the
-    # client replies with just a city name like "Dax").
     if session.state.get("pending_section") == "logement":
         log_event(logger, "chat.classify", session_id=session.session_id,
                   section="logement", confidence=1.0, reason="slot_filling")
@@ -98,6 +83,5 @@ def handle(message: str, session: Session) -> dict:
     if section == "logement":
         return handle_logement(message, session, scrubbed_message)
     if section in RAG_SECTIONS:
-        # assurance / conditions → réponse ancrée sur les documents ingérés
         return handle_rag(message, session, scrubbed_message, section)
     return handoff(section, message, session)

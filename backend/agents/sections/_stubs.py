@@ -1,9 +1,3 @@
-"""
-Stub sections — for this prototype only `logement` is complete. The others
-politely hand the request off to the human team and log the event. They never
-guess an answer.
-"""
-
 from __future__ import annotations
 
 from ...core.logging import get_logger, log_event
