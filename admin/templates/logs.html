@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Journal — Clara{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Journal d'activité</h1>
+  <p class="muted small">
+    Logs structurés (JSON). Les données sensibles ne sont jamais journalisées —
+    seuls les compteurs et statuts apparaissent.
+  </p>
+  {% if logs %}
+  <table>
+    <thead><tr><th>Horodatage</th><th>Niveau</th><th>Événement</th><th>Détails</th></tr></thead>
+    <tbody>
+      {% for l in logs %}
+      <tr>
+        <td class="small">{{ (l.ts or "")[:19].replace("T", " ") }}</td>
+        <td><span class="status {{ 'err' if l.level in ('ERROR','WARNING') else 'ok' }}">{{ l.level }}</span></td>
+        <td>{{ l.event }}</td>
+        <td class="small">
+          {% for k, v in l.items() if k not in ("ts", "level", "logger", "event") %}
+            <span class="kv">{{ k }}={{ v }}</span>
+          {% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Aucun log pour l'instant.</p>
+  {% endif %}
+</section>
+{% endblock %}

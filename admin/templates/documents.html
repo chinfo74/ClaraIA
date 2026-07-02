@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h1>Documents de la base de connaissances</h1>
+  <p class="muted">
+    Téléversez un document (PDF, DOCX ou TXT). Clara identifie son type, en extrait
+    l'essentiel, retire les données personnelles (LLM + Presidio), puis l'ajoute à
+    la base vectorielle.
+    {% if total_chunks is not none %}<strong>{{ total_chunks }}</strong> chunks indexés au total.{% endif %}
+  </p>
+  <form class="upload" action="/admin/upload" method="post" enctype="multipart/form-data">
+    <label class="file-label">
+      <input type="file" name="file" accept=".pdf,.docx,.txt,.md" required>
+      <span>Choisir un fichier</span>
+    </label>
+    <button type="submit" class="btn">Ingérer le document</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Documents ingérés</h2>
+  {% if documents %}
+  <table>
+    <thead>
+      <tr><th>Titre</th><th>Type</th><th>Date</th><th>Chunks</th><th>PII retirées</th><th>Statut</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for d in documents %}
+      <tr>
+        <td>{{ d.title or d.filename }}<br><span class="muted small">{{ d.filename }}</span></td>
+        <td><span class="tag">{{ d.doc_type }}</span></td>
+        <td class="small">{{ d.ingested_at[:19].replace("T", " ") }}</td>
+        <td>{{ d.n_chunks }}</td>
+        <td>{{ d.pii_removed }}</td>
+        <td>
+          {% if d.status == "success" %}<span class="status ok">OK</span>
+          {% else %}<span class="status err">Erreur</span>{% endif %}
+        </td>
+        <td><a class="link" href="/admin/document/{{ d.document_id }}">Vérifier →</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Aucun document ingéré pour l'instant.</p>
+  {% endif %}
+</section>
+{% endblock %}

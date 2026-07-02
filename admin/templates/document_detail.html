@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ doc.title or doc.filename }} — Clara{% endblock %}
+{% block content %}
+<p><a class="link" href="/admin">← Tous les documents</a></p>
+
+<section class="card">
+  <h1>{{ doc.title or doc.filename }}</h1>
+  <div class="meta-grid">
+    <div><span class="muted small">Fichier source</span><br>{{ doc.filename }}</div>
+    <div><span class="muted small">Type détecté</span><br><span class="tag">{{ doc.doc_type }}</span></div>
+    <div><span class="muted small">Chunks indexés</span><br>{{ doc.n_chunks }}</div>
+    <div><span class="muted small">Statut</span><br>
+      {% if doc.status == "success" %}<span class="status ok">OK</span>
+      {% else %}<span class="status err">Erreur</span>{% endif %}
+    </div>
+  </div>
+
+  {% if doc.error %}<p class="error-box">{{ doc.error }}</p>{% endif %}
+
+  <div class="pii-box">
+    <strong>{{ doc.pii_removed }}</strong> donnée(s) personnelle(s) retirée(s) par le garde-fou.
+    {% if doc.pii_breakdown %}
+      <ul class="inline">
+        {% for entity, n in doc.pii_breakdown.items() %}<li>{{ entity }} : {{ n }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+
+  {% if doc.summary %}<p class="muted"><em>{{ doc.summary }}</em></p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>Markdown nettoyé <span class="muted small">(à vérifier humainement)</span></h2>
+  <pre class="md-view">{{ markdown }}</pre>
+</section>
+{% endblock %}

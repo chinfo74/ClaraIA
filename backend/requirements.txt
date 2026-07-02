@@ -1,0 +1,35 @@
+# ── Web / API ──────────────────────────────────────────────────────────────
+fastapi>=0.115.5
+uvicorn[standard]>=0.32.1
+pydantic>=2.11.0
+pydantic-settings>=2.6.0
+python-dotenv>=1.0.1
+python-multipart>=0.0.18      # file uploads in the back-office
+jinja2>=3.1.4                 # back-office templates
+
+# ── LLM (provider: Mistral, EU) ──────────────────────────────────────────────
+mistralai>=1.2.0
+httpx>=0.28.0                 # optional Ollama embedding fallback
+
+# ── RAG ──────────────────────────────────────────────────────────────────────
+chromadb>=0.5.20
+# Keep the OpenTelemetry stack internally consistent. On Python 3.14, pip may
+# otherwise mix opentelemetry-api 1.39 with sdk 1.42 → ImportError in chromadb.
+# (mistralai prefers semantic-conventions <0.61 but works fine with 0.63b1.)
+opentelemetry-api==1.42.1
+opentelemetry-sdk==1.42.1
+opentelemetry-semantic-conventions==0.63b1
+
+# ── Document parsing ─────────────────────────────────────────────────────────
+pdfplumber>=0.11.0           # primary PDF text extraction (better glyph spacing)
+pypdf>=5.1.0                 # fallback PDF extractor
+python-docx>=1.1.2
+
+# ── PII guardrail (Microsoft Presidio, French) ───────────────────────────────
+presidio-analyzer>=2.2.355
+presidio-anonymizer>=2.2.355
+# French spaCy model is installed separately (not a PyPI dep here):
+#   python -m spacy download fr_core_news_md
+
+# ── Tests ──────────────────────────────────────────────────────────────────────
+pytest>=8.3.0

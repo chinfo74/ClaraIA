@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Clara — Back-office{% endblock %}</title>
+  <link rel="stylesheet" href="/admin/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">💧 Clara <span>· back-office</span></div>
+    <nav>
+      <a href="/admin">Documents</a>
+      <a href="/admin/logs">Journal</a>
+      <a href="/docs" target="_blank" rel="noopener">API</a>
+    </nav>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,27 @@
+# ── Secrets — NE JAMAIS committer ────────────────────────────────────────────
+.env
+backend/.env
+.env.preserved
+*.key
+
+# ── Python ───────────────────────────────────────────────────────────────────
+.venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# ── Données générées au runtime (index, uploads, logs) ───────────────────────
+backend/data/
+base_clara/
+
+# ── Documents de test (peuvent contenir de la PII) ───────────────────────────
+documents/
+
+# ── Archive locale de l'ancien prototype (volumineux) ────────────────────────
+_archive/
+
+# ── Divers ───────────────────────────────────────────────────────────────────
+.DS_Store
+node_modules/
+
+location-cure.net
