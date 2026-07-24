@@ -7,12 +7,7 @@ from ...core.logging import get_logger, log_event
 from ...session.store import Session
 from ...tools import voyagedo_api as api
 from ...tools.validators import parse_date, validate_logement
-from ..schemas import (
-    FORMAT_SYSTEM,
-    LOGEMENT_EXTRACT_SYSTEM,
-    LOGEMENT_INFO_SYSTEM,
-    LOGEMENT_SCHEMA,
-)
+from ..schemas import FORMAT_SYSTEM, LOGEMENT_EXTRACT_SYSTEM, LOGEMENT_INFO_SYSTEM, LOGEMENT_SCHEMA
 
 logger = get_logger("logement")
 

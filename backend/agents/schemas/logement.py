@@ -1,39 +1,5 @@
 from __future__ import annotations
 
-SECTIONS = ["logement", "assurance", "conditions", "proprietaire", "stations", "autre"]
-CONFIDENCE_THRESHOLD = 0.6
-
-RAG_SECTIONS = {"assurance", "conditions"}
-RAG_MIN_SCORE = 0.30
-
-CLASSIFY_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "section": {"type": "string", "enum": SECTIONS},
-        "confidence": {"type": "number"},
-    },
-    "required": ["section", "confidence"],
-    "additionalProperties": False,
-}
-
-CLASSIFY_SYSTEM = (
-    "Tu es le Manager de Clara, l'assistante de Voyage d'Ô (location de logements pour "
-    "curistes seniors près des stations thermales). Classe la demande du client dans UNE "
-    "section et donne un score de confiance entre 0 et 1.\n"
-    "Sections :\n"
-    "- logement : chercher/réserver un logement, disponibilités, tarifs d'un hébergement, "
-    "séjour dans une ville à des dates.\n"
-    "- assurance : assurance annulation, garanties, sinistres, remboursement, IPID.\n"
-    "- conditions : conditions générales de vente, annulation, paiement (acompte, solde), "
-    "caution/dépôt de garantie, déroulement du séjour, documents, règles.\n"
-    "- proprietaire : personne qui possède/propose un bien à louer.\n"
-    "- stations : questions sur les stations thermales, les cures, les pathologies.\n"
-    "- autre : tout le reste, hors périmètre, ou trop ambigu.\n"
-    "Donne une confiance élevée (>0.8) seulement si la section est claire. Si tu hésites, "
-    "baisse la confiance."
-)
-
-
 LOGEMENT_SCHEMA = {
     "type": "object",
     "properties": {
@@ -98,13 +64,4 @@ FORMAT_SYSTEM = (
     "Écris en texte simple et lisible, SANS Markdown (n'utilise ni «**», ni «#») ; "
     "pour une liste, commence chaque ligne par un tiret. "
     "Termine en proposant d'obtenir plus de détails ou d'être aidé pour réserver."
-)
-
-RAG_SYSTEM = (
-    "Tu es Clara, l'assistante de Voyage d'Ô, qui s'adresse à des curistes seniors : "
-    "phrases courtes, ton chaleureux et rassurant. Réponds à la question en t'appuyant "
-    "UNIQUEMENT sur le contexte documentaire fourni ci-dessous. N'invente RIEN. "
-    "Si le contexte ne contient pas la réponse, dis-le franchement et invite à contacter "
-    "service.client@voyagedo.fr — ne devine pas. Ne mentionne pas « le contexte » ni « les "
-    "documents », réponds naturellement. Écris en texte simple, sans Markdown."
 )
