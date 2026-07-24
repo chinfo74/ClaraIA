@@ -4,16 +4,11 @@ from ..core.llm_client import get_llm_client
 from ..core.logging import get_logger, log_event
 from ..rag.pii import scrub_pii
 from ..session.store import Session
-from .schemas import (
-    CLASSIFY_SCHEMA,
-    CLASSIFY_SYSTEM,
-    CONFIDENCE_THRESHOLD,
-    RAG_SECTIONS,
-    SECTIONS,
-)
+from .schemas import CLASSIFY_SCHEMA, CLASSIFY_SYSTEM, CONFIDENCE_THRESHOLD, RAG_SECTIONS, SECTIONS
 from .sections._stubs import handoff
 from .sections.logement import handle_logement
 from .sections.rag import handle_rag
+from .sections.stations import handle_stations
 
 logger = get_logger("manager")
 
@@ -82,6 +77,8 @@ def handle(message: str, session: Session) -> dict:
         return handoff("autre", message, session)
     if section == "logement":
         return handle_logement(message, session, scrubbed_message)
+    if section == "stations":
+        return handle_stations(message, session, scrubbed_message)
     if section in RAG_SECTIONS:
         return handle_rag(message, session, scrubbed_message, section)
     return handoff(section, message, session)
