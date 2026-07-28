@@ -21,7 +21,7 @@ _FILTER_KEYWORDS = {
     "mount": ("montagne", "en altitude"),
     "in_city": (
         "près d'une grande ville", "proche d'une grande ville", "à côté d'une grande ville",
-        "pas isolé", "pas trop isolé", "proche d'une ville", "près d'une ville",
+        "pas isolé", "pas trop isolé", "proche d'une ville", "près d'une ville", "dans une grande ville"
     ),
     "big_center": ("grand centre", "grande station", "gros centre", "beaucoup de curistes"),
 }
@@ -59,7 +59,7 @@ def _extract_slots(message: str, state: dict) -> dict:
 def _merge_slots(state: dict, extracted: dict, message: str) -> None:
     for key in _SLOT_KEYS:
         value = extracted.get(key)
-        if value not in (None, "", "null"):
+        if value not in (None, "", "null", []):
             state[key] = value
     state.update(_detect_filters(message))
 
@@ -70,7 +70,6 @@ def handle_stations(message: str, session: Session, scrubbed_message: str) -> di
     try:
         extracted = _extract_slots(scrubbed_message, state)
     except Exception as exc:
-        logger.warning("Extraction des critères stations indisponible : %s", exc)
         return _reply(_DEGRADED, session)
 
     _merge_slots(state, extracted, message)
@@ -78,21 +77,50 @@ def handle_stations(message: str, session: Session, scrubbed_message: str) -> di
     return _handle_search(state, session)
 
 
-def _format_center(center: dict) -> str:
-    return "details center"
+def _resolve_pathologies(state: dict) -> list:
+    raw = state.get("pathologie")
+    if isinstance(raw, str):
+        names = [raw] if raw else []
+    elif isinstance(raw, list):
+        names = [n for n in raw if n]
+    else:
+        names = []
+    ids = []
+    for name in names:
+        patho_id, _ = api.resolve_path(name)
+        if patho_id:
+            ids.append(patho_id)
+    return ids
 
 
 def _format_results(items: list, session: Session) -> str:
-    return "TEST TEST"
+    facts = items[:8]
+    user = (
+        f"{len(items)} station(s) thermale(s) trouvée(s) selon les critères du client :\n"
+        f"{json.dumps(facts, ensure_ascii=False)}\n\n"
+        "Rédige la réponse pour le client à partir de ces données uniquement (nom de la "
+        "station, ville, pathologies traitées si présentes). Invite-le à demander la fiche "
+        "d'une station ou à en comparer plusieurs."
+    )
+    return get_llm_client().complete_text(FORMAT_SYSTEM, [{"role": "user", "content": user}], max_tokens=700)
 
 
 def _handle_search(state: dict, session: Session) -> dict:
-    ville_id, _ = api.resolve_center_ville(state.get("ville") or "")
-    patho_id, _ = api.resolve_path(state.get("pathologie") or "")
+    ville_query = state.get("ville") or ""
+
+    ville_id, _ = api.resolve_center_ville(ville_query)
+    patho_ids = _resolve_pathologies(state)
+
+    if not ville_id and not patho_ids and not any(state.get(k) for k in _FILTER_KEYS):
+        return _reply(
+            "Pour vous proposer les bonnes stations, dites-moi une ville de référence, "
+            "une pathologie, ou vos critères (bord de mer, sans voiture, budget...).",
+            session,
+        )
 
     data = api.filter_centers(
         ville_ids=ville_id,
-        path_ids=patho_id,
+        path_ids=patho_ids,
         near_sea=state.get("near_sea"),
         no_car=state.get("no_car"),
         cheap=state.get("cheap"),
@@ -100,6 +128,9 @@ def _handle_search(state: dict, session: Session) -> dict:
         in_city=state.get("in_city"),
         big_center=state.get("big_center"),
     )
+    
+    print(ville_id, patho_ids, state.get("near_sea"), state.get("no_car"), state.get("cheap"), state.get("mount"), state.get("in_city"), state.get("big_center"))
+    print(data, len(data))
 
     failed = isinstance(data, dict) and "erreur" in data
     items = data if isinstance(data, list) else []
