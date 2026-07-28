@@ -5,7 +5,7 @@ STATIONS_SCHEMA = {
 	"properties": {
 		"theme": {"type": ["string", "null"]},
 		"ville": {"type": ["string", "null"]},
-		"pathologie": {"type": ["string", "null"]},
+		"pathologie": {"type": ["array", "null"], "items": {"type": "string"}},
 		"station_nom": {"type": ["string", "null"]},
 		"question": {"type": ["string", "null"]},
 		"comparaison": {
@@ -31,12 +31,20 @@ STATIONS_EXTRACT_SYSTEM = (
 	"le nombre de curistes, l'orientation thérapeutique.\n"
 	"- comparaison_station : comparer 2 stations nommées ou plus.\n"
 	"Champs :\n"
-	"- ville = ville de référence (ex. 'Dax', 'près de Dax', 'autour de Vichy').\n"
-	"- pathologie = nom médical précis de l'affection recherchée par le client, reformulé le "
-	"plus littéralement possible (ex. 'acné', 'arthrose du genou', 'sciatique', 'eczéma'). "
-	"Ne généralise JAMAIS vers une grande spécialité (évite 'rhumatologie', 'dermatologie', "
-	"'phlébologie') : préfère toujours le terme précis le plus proche de ce que dit le client, "
-	"même si le client emploie une expression courante (ex. 'j'ai mal au dos' → 'mal de dos').\n"
+	"- ville = ville de référence UNIQUEMENT si le client en cite une explicitement dans son "
+	"message (le format attendu est un nom de ville, ex. 'Dax', 'Vichy'). Les exemples "
+	"ci-dessus servent juste à illustrer le format : ne les recopie jamais comme valeur si "
+	"le client n'a mentionné aucune ville. Si aucune ville n'est citée, mets null.\n"
+	"- pathologie = liste des noms médicaux précis des affections recherchées par le client "
+	"(une entrée par affection citée), reformulés le plus littéralement possible sans ajouter "
+	"de détail non mentionné (ex. si le client dit 'arthrose', écris 'arthrose', pas 'arthrose "
+	"du genou' ; si le client dit 'acné', écris 'acné', pas 'acné sévère'). Si le client cite "
+	"plusieurs pathologies, mets-les TOUTES dans la liste (ne garde jamais une seule d'entre "
+	"elles). Ne généralise JAMAIS vers une grande spécialité (évite 'rhumatologie', "
+	"'dermatologie', 'phlébologie') : préfère toujours le terme précis le plus proche de ce que "
+	"dit le client, même si le client emploie une expression courante (ex. 'j'ai mal au dos' → "
+	"'mal de dos'). N'invente et n'ajoute jamais de précision que le client n'a pas donnée. "
+	"Mets null si aucune pathologie n'est mentionnée.\n"
 	"- station_nom = nom exact ou approximatif de la station si le client en cite une.\n"
 	"- question = pour theme infos_station, recopie la question précise du client (ex. « quelles "
 	"pathologies sont traitées ? », « c'est à quelle distance de Dax ? »), sinon null.\n"
@@ -47,9 +55,10 @@ STATIONS_EXTRACT_SYSTEM = (
 )
 
 STATIONS_INFO_SYSTEM = (
-	"Tu es Clara, l'assistante de Voyage d'Ô, qui s'adresse à des curistes seniors : phrases "
-	"courtes, ton chaleureux et rassurant. Réponds à la question du client en t'appuyant "
-	"UNIQUEMENT sur les données de la station fournies. N'invente RIEN. Si l'information "
-	"manque, dis-le franchement et invite à écrire à service.client@voyagedo.fr. Écris en "
-	"texte simple, sans Markdown."
+    "Tu es Clara, l'assistante de Voyage d'Ô. Tu t'adresses à des curistes seniors : "
+    "phrases courtes, ton chaleureux, rassurant et simple. N'invente RIEN : utilise "
+    "uniquement les informations fournies. Pas de formules d'excuse inutiles. "
+    "Écris en texte simple et lisible, SANS Markdown (n'utilise ni «**», ni «#») ; "
+    "pour une liste, commence chaque ligne par un tiret. "
+    "Termine en proposant d'obtenir plus de détails ou d'être aidé pour réserver."
 )
