@@ -8,6 +8,7 @@ logger = get_logger("voyagedo")
 
 MOB1_URL = "https://www.location-cure.net/mob1"
 CLARA_URL = "https://www.location-cure.net/clara"
+CLARALOG_URL = "http://localhost:8888/claralog"
 TIMEOUT = 12.0
 
 
@@ -59,6 +60,59 @@ def resolve_ville(name: str) -> tuple[int | None, str | None]:
             return (s.get("StationID"), s.get("StationCity"))
     return (None, None)
 
+_PATHOLOGIE_CACHE: list[dict] | None = None
+
+def _pathologie() -> list[dict]:
+    global _PATHOLOGIE_CACHE
+    if _PATHOLOGIE_CACHE is None:
+        data = _get("pathologie", base=CLARALOG_URL)
+        _PATHOLOGIE_CACHE = data if isinstance(data, list) else []
+    return _PATHOLOGIE_CACHE
+
+
+def pathologie_names() -> list[str]:
+    return [p.get("name", "") for p in _pathologie() if p.get("name")]
+
+
+def resolve_path(name: str) -> tuple[int | None, str | None]:
+    if not name:
+        return (None, None)
+    query = name.strip().lower()
+    pathologies = _pathologie()
+    for p in pathologies:
+        if str(p.get("name", "")).strip().lower() == query:
+            return (p.get("sointher_id"), p.get("name"))
+    for p in pathologies:
+        patho = str(p.get("name", "")).strip().lower()
+        if patho.startswith(query) or query in patho:
+            return (p.get("sointher_id"), p.get("name"))
+    return (None, None)
+
+
+_CENTERS_CACHE: list[dict] | None = None
+
+
+def _centers() -> list[dict]:
+    global _CENTERS_CACHE
+    if _CENTERS_CACHE is None:
+        data = filter_centers()
+        _CENTERS_CACHE = data if isinstance(data, list) else []
+    return _CENTERS_CACHE
+
+
+def resolve_center_ville(name: str) -> tuple[int | None, str | None]:
+    if not name:
+        return (None, None)
+    query = name.strip().lower()
+    centers = _centers()
+    for c in centers:
+        if str(c.get("city_name", "")).strip().lower() == query:
+            return (c.get("city_id"), c.get("city_name"))
+    for c in centers:
+        city = str(c.get("city_name", "")).strip().lower()
+        if city.startswith(query) or query in city:
+            return (c.get("city_id"), c.get("city_name"))
+    return (None, None)
 
 def search_logements(ville_id: int | str, start: str, end: str, equip: str = "0"):
     return _get(
@@ -112,3 +166,4 @@ def get_pricing(advert_id: int | str):
 
 def get_reviews(advert_id: int | str):
     return _get(f"avis/id/{advert_id}", base=CLARA_URL)
+
