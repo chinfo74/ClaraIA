@@ -167,3 +167,47 @@ def get_pricing(advert_id: int | str):
 def get_reviews(advert_id: int | str):
     return _get(f"avis/id/{advert_id}", base=CLARA_URL)
 
+
+
+def get_centers():
+    return _get("centers", base=CLARALOG_URL)
+
+
+def get_center_card(center_id: int | str):
+    return _get(f"centercard/id/{center_id}", base=CLARALOG_URL)
+
+
+def filter_centers(
+    ville_ids=None,
+    path_ids=None,
+    latitude=None,
+    longitude=None,
+    radius=None,
+    near_sea=None,
+    no_car=None,
+    cheap=None,
+    mount=None,
+    in_city=None,
+    big_center=None,
+):
+    parts = ["filtercenter"]
+
+    def add(key: str, value) -> None:
+        if value in (None, "", [], ()):
+            return
+        if isinstance(value, (list, tuple)):
+            value = "-".join(str(v) for v in value)
+        parts.extend([key, str(value)])
+
+    add("ville", ville_ids)
+    add("path", path_ids)
+    add("latitude", latitude)
+    add("longitude", longitude)
+    add("radius", radius)
+    add("nearsea", near_sea)
+    add("nocar", no_car)
+    add("cheap", cheap)
+    add("mount", mount)
+    add("incity", in_city)
+    add("bigcenter", big_center)
+    return _get("/".join(parts), base=CLARALOG_URL)
